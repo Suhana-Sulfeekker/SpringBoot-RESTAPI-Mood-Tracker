@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Moody App</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #f2f4f8;
+            padding: 30px;
+            max-width: 600px;
+            margin: auto;
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        input {
+            padding: 10px;
+            margin-right: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+
+        button {
+            padding: 10px 15px;
+            border: none;
+            background: #4caf50;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #45a049;
+        }
+
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        li {
+            background: #fff;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        }
+
+        .actions button {
+            margin-left: 5px;
+            background: #2196F3;
+        }
+
+        .actions button.delete {
+            background: #f44336;
+        }
+
+        .actions button:hover {
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Moody App</h1>
+
+    <div class="card">
+        <h2>Add / Update Mood</h2>
+        <input id="date" type="date">
+        <input id="mood" placeholder="How are you feeling today?">
+        <button id="submitBtn" onclick="addMood()">Add Mood</button>
+    </div>
+
+    <div class="card">
+        <h2>All Moods</h2>
+        <button onclick="loadMoods()">Refresh List</button>
+        <ul id="moodList"></ul>
+    </div>
+
+    <script>
+        function addMood() {
+            const date = document.getElementById("date").value;
+            const mood = document.getElementById("mood").value;
+            if (!date || !mood) {
+                alert("Please fill in both date and mood.");
+                return;
+            }
+
+            fetch("/api/moods", {
+                method: "POST",
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ date, mood })
+            }).then(() => {
+                resetForm();
+                loadMoods();
+            });
+        }
+
+        function loadMoods() {
+            fetch("/api/moods")
+                .then(res => res.json())
+                .then(data => {
+                    const ul = document.getElementById("moodList");
+                    ul.innerHTML = "";
+                    data.forEach(m => {
+                        const li = document.createElement("li");
+                        li.innerHTML = `
+                            <span>#${m.id} - ${m.date}: ${m.mood}</span>
+                            <span class="actions">
+                                <button onclick="editMood(${m.id}, '${m.date}', '${m.mood}')">Edit</button>
+                                <button class="delete" onclick="deleteMood(${m.id})">Delete</button>
+                            </span>`;
+                        ul.appendChild(li);
+                    });
+                });
+        }
+
+        function deleteMood(id) {
+            fetch(`/api/moods/${id}`, { method: "DELETE" })
+                .then(loadMoods);
+        }
+
+        function editMood(id, date, mood) {
+            document.getElementById("date").value = date;
+            document.getElementById("mood").value = mood;
+
+            const button = document.getElementById("submitBtn");
+            button.textContent = "Update Mood";
+            button.onclick = () => updateMood(id);
+        }
+
+        function updateMood(id) {
+            const date = document.getElementById("date").value;
+            const mood = document.getElementById("mood").value;
+
+            fetch(`/api/moods/${id}`, {
+                method: "PUT",
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ date, mood })
+            }).then(() => {
+                resetForm();
+                loadMoods();
+            });
+        }
+
+        function resetForm() {
+            document.getElementById("date").value = "";
+            document.getElementById("mood").value = "";
+            const button = document.getElementById("submitBtn");
+            button.textContent = "Add Mood";
+            button.onclick = addMood;
+        }
+
+        loadMoods(); // Load on page start
+    </script>
+</body>
+</html>
